@@ -73,7 +73,7 @@
         <div id="tab-dashboard" class="space-y-4 md:space-y-6">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                 <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
-                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total Balance</p>
+                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total Savings</p>
                     <h3 id="stat-balance" class="text-lg md:text-2xl font-bold text-slate-800 mb-1">₹0.00</h3>
                     <p class="text-[10px] text-emerald-600 font-medium"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Healthy</p>
                     <div class="absolute top-4 right-4 bg-emerald-50 text-emerald-500 p-2 md:p-3 rounded-xl opacity-50 md:opacity-100"><i class="fa-solid fa-scale-balanced text-lg"></i></div>
@@ -115,6 +115,18 @@
                     </div>
                     <div class="h-48 md:h-64 relative flex items-center justify-center">
                         <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+                <!-- Monthly Expenses by Year View -->
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 mt-4 md:mt-6">
+                    <div class="flex justify-between items-center mb-4 md:mb-6">
+                        <h3 class="font-bold text-slate-800 text-sm md:text-base"><i class="fa-regular fa-calendar-days text-indigo-500 mr-2"></i> Monthly Expense Tracker</h3>
+                        <select id="yearSelector" onchange="drawMonthlyChart()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs md:text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-bold">
+                            <!-- Years injected via JS -->
+                        </select>
+                    </div>
+                    <div class="h-48 md:h-64 relative flex items-center justify-center">
+                        <canvas id="monthlyChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -276,6 +288,7 @@
         let rawData = [];
         let doughnutChartInst = null;
         let barChartInst = null;
+        let monthlyChartInst = null;
         
         const currencyFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
@@ -391,6 +404,8 @@
                 updateDashboard();
                 renderTable(rawData);
                 drawCharts();
+                populateYearDropdown();
+                drawMonthlyChart();
                 loading.style.display = 'none';
 
             } catch (error) {
@@ -444,17 +459,20 @@
         function updateDashboard() {
             let inc = 0, exp = 0;
             rawData.forEach(row => {
-                let amount = parseFloat(row[2]) || 0;
-                let type = String(row[5]).trim().toLowerCase();
-                if (type === 'income') inc += amount;
-                else exp += amount;
-            });
+        // Safely strip symbols and commas before parsing
+            let amount = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
+            let type = String(row[5]).trim().toLowerCase();
+        
+            if (type === 'income') inc += amount;
+            else exp += amount;
+        });
 
-            document.getElementById('stat-balance').innerText = currencyFmt.format(inc - exp);
+    // Total Balance is now strictly equal to Total Income
+            document.getElementById('stat-balance').innerText = currencyFmt.format(inc);
             document.getElementById('stat-income').innerText = currencyFmt.format(inc);
             document.getElementById('stat-expenses').innerText = currencyFmt.format(exp);
             document.getElementById('stat-count').innerText = rawData.length;
-        }
+}   
 
         function renderTable(data) {
             const tBodyDesk = document.getElementById('tableBodyDesktop');
@@ -472,7 +490,8 @@
             // Render Desktop (Table)
             tBodyDesk.innerHTML = displayData.map(row => {
                 let date = row[1] ? new Date(row[1]).toISOString().split('T')[0] : '';
-                let amount = parseFloat(row[2]) || 0;
+                // Safely strip symbols and commas
+                let amount = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
                 let desc = row[3] || '';
                 let cat = row[4] || 'Uncategorized';
                 let type = String(row[5]).trim();
@@ -495,7 +514,8 @@
             // Render Mobile (Card List)
             tBodyMob.innerHTML = displayData.map(row => {
                 let date = row[1] ? new Date(row[1]).toISOString().split('T')[0] : '';
-                let amount = parseFloat(row[2]) || 0;
+                // Safely strip symbols and commas
+                let amount = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
                 let desc = row[3] || '';
                 let cat = row[4] || 'Uncategorized';
                 let type = String(row[5]).trim();
@@ -538,7 +558,8 @@
             let incTotal = 0, expTotal = 0;
 
             rawData.forEach(row => {
-                let amt = parseFloat(row[2]) || 0;
+                // Safely strip symbols and commas
+                let amt = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
                 let cat = row[4] || 'Uncategorized';
                 let type = String(row[5]).trim().toLowerCase();
 
@@ -580,6 +601,76 @@
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: {font: {size: 10}} },
+                        x: { grid: { display: false }, border: { display: false }, ticks: {font: {size: 10}} }
+                    }
+                }
+            });
+        }
+
+        // Populates the dropdown with years based on your sheet data
+        function populateYearDropdown() {
+            const yearSelect = document.getElementById('yearSelector');
+            const years = new Set();
+            
+            // Extract years from the Date column (index 1)
+            rawData.forEach(row => {
+                if (row[1]) {
+                    const date = new Date(row[1]);
+                    if (!isNaN(date.getFullYear())) years.add(date.getFullYear());
+                }
+            });
+            
+            // Ensure current year is always available
+            years.add(new Date().getFullYear());
+            
+            // Sort highest to lowest
+            const sortedYears = Array.from(years).sort((a, b) => b - a);
+            
+            // Inject into HTML
+            yearSelect.innerHTML = sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
+        }
+
+        // Filters data by selected year and draws the 12-month bar chart
+        function drawMonthlyChart() {
+            if (rawData.length === 0) return;
+            
+            const selectedYear = parseInt(document.getElementById('yearSelector').value);
+            const monthlyData = new Array(12).fill(0); // [Jan, Feb, ... Dec]
+            
+            rawData.forEach(row => {
+                let type = String(row[5]).trim().toLowerCase();
+                if (type !== 'expense') return; // Only sum up expenses
+                
+                if (row[1]) {
+                    const date = new Date(row[1]);
+                    if (date.getFullYear() === selectedYear) {
+                        let amount = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
+                        monthlyData[date.getMonth()] += amount;
+                    }
+                }
+            });
+            
+            const ctx = document.getElementById('monthlyChart').getContext('2d');
+            if (monthlyChartInst) monthlyChartInst.destroy();
+            
+            monthlyChartInst = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Total Spent (₹)',
+                        data: monthlyData,
+                        backgroundColor: '#8b5cf6', // Purple color
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true, 
+                    maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
                         y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: {font: {size: 10}} },
