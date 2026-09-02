@@ -13,7 +13,6 @@
             font-family: 'Inter', sans-serif; 
             -webkit-tap-highlight-color: transparent;
         }
-        /* Hide scrollbars for clean mobile swiping */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -21,7 +20,6 @@
         .preset-scroll::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
         .preset-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         
-        /* iOS Safe Area Padding */
         .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
     </style>
 </head>
@@ -53,7 +51,6 @@
                 </button>
             </div>
             
-            <!-- Universal Refresh Button -->
             <button onclick="loadSheetData()" class="text-slate-400 hover:text-white p-2 rounded-md transition" title="Refresh Data">
                 <i class="fa-solid fa-rotate-right" id="refresh-icon"></i>
             </button>
@@ -63,7 +60,7 @@
     <!-- Main Content Area -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 overflow-y-auto pb-24 md:pb-6">
         
-        <!-- Toast Notification (Elevated on mobile to avoid bottom nav) -->
+        <!-- Toast Notification -->
         <div id="toast" class="fixed bottom-20 md:bottom-5 right-4 md:right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 border border-slate-700">
             <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
             <span id="toast-msg" class="text-sm font-medium">Action completed</span>
@@ -71,25 +68,35 @@
 
         <!-- DASHBOARD TAB -->
         <div id="tab-dashboard" class="space-y-4 md:space-y-6">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+                
+                <!-- TOTAL BALANCE CARD (Temporarily Commented Out)
                 <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
-                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total Savings</p>
+                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total Balance</p>
                     <h3 id="stat-balance" class="text-lg md:text-2xl font-bold text-slate-800 mb-1">₹0.00</h3>
                     <p class="text-[10px] text-emerald-600 font-medium"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Healthy</p>
                     <div class="absolute top-4 right-4 bg-emerald-50 text-emerald-500 p-2 md:p-3 rounded-xl opacity-50 md:opacity-100"><i class="fa-solid fa-scale-balanced text-lg"></i></div>
                 </div>
+                -->
+
+                <!-- Expenses Card -->
                 <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
                     <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Expenses</p>
                     <h3 id="stat-expenses" class="text-lg md:text-2xl font-bold text-rose-500 mb-1">₹0.00</h3>
                     <p class="text-[10px] text-slate-400 font-medium hidden md:block">All recorded outflows</p>
                     <div class="absolute top-4 right-4 bg-rose-50 text-rose-500 p-2 md:p-3 rounded-xl opacity-50 md:opacity-100"><i class="fa-solid fa-arrow-trend-down text-lg"></i></div>
                 </div>
+                
+                <!-- Income Card -->
                 <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
-                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Income</p>
+                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total Savings</p>
                     <h3 id="stat-income" class="text-lg md:text-2xl font-bold text-blue-500 mb-1">₹0.00</h3>
                     <p class="text-[10px] text-slate-400 font-medium hidden md:block">All inflows</p>
                     <div class="absolute top-4 right-4 bg-blue-50 text-blue-500 p-2 md:p-3 rounded-xl opacity-50 md:opacity-100"><i class="fa-solid fa-wallet text-lg"></i></div>
                 </div>
+                
+                <!-- Transactions Card -->
                 <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
                     <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Transactions</p>
                     <h3 id="stat-count" class="text-lg md:text-2xl font-bold text-slate-800 mb-1">0</h3>
@@ -98,6 +105,7 @@
                 </div>
             </div>
 
+            <!-- Spending & Cash Flow Charts -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
                 <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100">
                     <div class="flex justify-between items-center mb-4 md:mb-6">
@@ -117,35 +125,39 @@
                         <canvas id="barChart"></canvas>
                     </div>
                 </div>
-                <!-- Monthly Expenses by Year View -->
-                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 mt-4 md:mt-6">
-                    <div class="flex justify-between items-center mb-4 md:mb-6">
-                        <h3 class="font-bold text-slate-800 text-sm md:text-base"><i class="fa-regular fa-calendar-days text-indigo-500 mr-2"></i> Monthly Expense Tracker</h3>
-                        <select id="yearSelector" onchange="drawMonthlyChart()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs md:text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-bold">
-                            <!-- Years injected via JS -->
-                        </select>
-                    </div>
-                    <div class="h-48 md:h-64 relative flex items-center justify-center">
-                        <canvas id="monthlyChart"></canvas>
-                    </div>
+            </div>
+
+            <!-- Monthly Expenses by Year Chart -->
+            <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex justify-between items-center mb-4 md:mb-6">
+                    <h3 class="font-bold text-slate-800 text-sm md:text-base"><i class="fa-regular fa-calendar-days text-indigo-500 mr-2"></i> Monthly Expense Tracker</h3>
+                    <select id="yearSelector" onchange="drawMonthlyChart()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs md:text-sm rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-bold">
+                        <!-- Years injected via JS -->
+                    </select>
+                </div>
+                <div class="h-48 md:h-64 relative flex items-center justify-center">
+                    <canvas id="monthlyChart"></canvas>
                 </div>
             </div>
         </div>
 
         <!-- TRANSACTIONS TAB -->
         <div id="tab-data" class="hidden space-y-4">
-            <!-- Search & Actions -->
             <div class="bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div class="relative w-full sm:w-96">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-search"></i></span>
                     <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search description, category..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
                 </div>
                 <div class="flex items-center space-x-2 w-full sm:w-auto">
-                    <button class="flex-1 md:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-center space-x-2">
-                        <i class="fa-solid fa-download"></i> <span class="hidden md:inline">Export</span>
-                    </button>
-                    <button onclick="switchTab('form')" class="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 shadow-sm">
-                        <i class="fa-solid fa-plus"></i> <span>Add New</span>
+                    <!-- Sort Dropdown -->
+                    <select id="sortSelector" onchange="filterTable()" class="flex-1 md:flex-none bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition font-medium">
+                        <option value="date-desc">Newest First</option>
+                        <option value="date-asc">Oldest First</option>
+                        <option value="amt-desc">Amount (High - Low)</option>
+                        <option value="amt-asc">Amount (Low - High)</option>
+                    </select>
+                    <button class="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 shadow-sm" onclick="switchTab('form')">
+                        <i class="fa-solid fa-plus"></i> <span class="hidden sm:inline">Add New</span>
                     </button>
                 </div>
             </div>
@@ -165,16 +177,12 @@
                                 <th class="px-6 py-4 text-center">Type</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-50 text-sm text-slate-700" id="tableBodyDesktop">
-                            <!-- Desktop Rows -->
-                        </tbody>
+                        <tbody class="divide-y divide-slate-50 text-sm text-slate-700" id="tableBodyDesktop"></tbody>
                     </table>
                 </div>
 
                 <!-- Mobile List View (Hidden on Desktop) -->
-                <div class="md:hidden flex flex-col divide-y divide-slate-100" id="tableBodyMobile">
-                    <!-- Mobile Card Rows -->
-                </div>
+                <div class="md:hidden flex flex-col divide-y divide-slate-100" id="tableBodyMobile"></div>
 
                 <!-- Loading State -->
                 <div id="tableLoading" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center space-y-3 z-20 h-64 md:h-auto">
@@ -187,21 +195,16 @@
         <!-- ADD EXPENSE TAB -->
         <div id="tab-form" class="hidden max-w-4xl mx-auto space-y-4 md:space-y-6">
             
-            <!-- Dark Presets Box (Horizontal scroll on mobile) -->
             <div class="bg-[#0f172a] rounded-2xl shadow-lg border border-slate-800 p-4 md:p-6">
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h3 class="font-bold text-white text-base md:text-lg flex items-center"><i class="fa-solid fa-bolt text-amber-400 mr-2"></i> Quick-Add Presets</h3>
-                        <p class="text-[10px] md:text-xs text-slate-400 mt-1 hidden md:block">Click any frequent item below to load it into the form.</p>
                     </div>
                 </div>
                 
-                <div class="flex md:grid md:grid-cols-4 gap-3 overflow-x-auto preset-scroll pb-2 snap-x" id="presetContainer">
-                    <!-- Presets injected via JS -->
-                </div>
+                <div class="flex md:grid md:grid-cols-4 gap-3 overflow-x-auto preset-scroll pb-2 snap-x" id="presetContainer"></div>
             </div>
 
-            <!-- Main Form -->
             <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-100">
                 <div class="mb-6 pb-4 border-b border-slate-100">
                     <h2 class="text-lg md:text-xl font-bold text-slate-800">Add New Transaction</h2>
@@ -272,7 +275,6 @@
             <span class="text-[10px] font-medium tracking-wide">Records</span>
         </button>
         <button onclick="switchTab('form')" id="mob-nav-form" class="flex flex-col items-center space-y-1 text-slate-400 transition relative">
-            <!-- Floating style add button -->
             <div class="absolute -top-6 bg-emerald-500 text-white p-3 rounded-full shadow-lg shadow-emerald-500/30">
                 <i class="fa-solid fa-plus text-lg"></i>
             </div>
@@ -282,7 +284,6 @@
 
     <!-- Application Logic -->
     <script>
-        // API Configuration 
         const apiUrl = "https://script.google.com/macros/s/AKfycbwotdnxhZWQQGf0fJ-aYTt5GXBAqFZVSWRZ4DHKKJiF8apeiEIGs-F-rnazMoN6dls7/exec";
         
         let rawData = [];
@@ -293,7 +294,6 @@
         const currencyFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
 
-        // Category Icon Mapper for Mobile UI
         const catIcons = {
             'Housing': 'fa-house', 'Food': 'fa-utensils', 'Transport': 'fa-car',
             'Shopping': 'fa-bag-shopping', 'Bills': 'fa-file-invoice',
@@ -328,15 +328,11 @@
         });
 
         function switchTab(tabName) {
-            // Hide all tabs
             ['dashboard', 'data', 'form'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.add('hidden');
-                
-                // Reset Desktop Nav
                 const btn = document.getElementById(`nav-${t}`);
                 if(btn) btn.className = "px-4 py-2 rounded-md font-medium text-sm transition flex items-center space-x-2 text-slate-300 hover:bg-slate-800";
                 
-                // Reset Mobile Nav
                 const mobBtn = document.getElementById(`mob-nav-${t}`);
                 if(mobBtn) {
                     mobBtn.classList.remove('text-emerald-400', 'scale-110');
@@ -344,21 +340,21 @@
                 }
             });
             
-            // Show Active Tab
             document.getElementById(`tab-${tabName}`).classList.remove('hidden');
             
-            // Highlight Desktop Nav
             const activeBtn = document.getElementById(`nav-${tabName}`);
             if(activeBtn) activeBtn.className = "px-4 py-2 rounded-md font-medium text-sm flex items-center space-x-2 transition text-emerald-400 bg-slate-800 border border-slate-700";
             
-            // Highlight Mobile Nav
             const activeMobBtn = document.getElementById(`mob-nav-${tabName}`);
             if(activeMobBtn) {
                 activeMobBtn.classList.remove('text-slate-400');
                 activeMobBtn.classList.add('text-emerald-400', 'scale-110');
             }
 
-            if (tabName === 'dashboard') drawCharts();
+            if (tabName === 'dashboard') {
+                drawCharts();
+                drawMonthlyChart();
+            }
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
@@ -436,7 +432,8 @@
                 const response = await fetch(apiUrl, {
                     method: "POST",
                     headers: { "Content-Type": "text/plain;charset=utf-8" },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    redirect: "follow"
                 });
                 
                 const result = await response.json();
@@ -456,23 +453,28 @@
             }
         }
 
+        // Dashboard calculations - safe checks added for missing elements
         function updateDashboard() {
             let inc = 0, exp = 0;
             rawData.forEach(row => {
-        // Safely strip symbols and commas before parsing
-            let amount = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
-            let type = String(row[5]).trim().toLowerCase();
-        
-            if (type === 'income') inc += amount;
-            else exp += amount;
-        });
+                let amount = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
+                let type = String(row[5]).trim().toLowerCase();
+                if (type === 'income') inc += amount;
+                else exp += amount;
+            });
 
-    // Total Balance is now strictly equal to Total Income
-            document.getElementById('stat-balance').innerText = currencyFmt.format(inc);
-            document.getElementById('stat-income').innerText = currencyFmt.format(inc);
-            document.getElementById('stat-expenses').innerText = currencyFmt.format(exp);
-            document.getElementById('stat-count').innerText = rawData.length;
-}   
+            const balEl = document.getElementById('stat-balance');
+            if(balEl) balEl.innerText = currencyFmt.format(inc);
+            
+            const incEl = document.getElementById('stat-income');
+            if(incEl) incEl.innerText = currencyFmt.format(inc);
+            
+            const expEl = document.getElementById('stat-expenses');
+            if(expEl) expEl.innerText = currencyFmt.format(exp);
+            
+            const countEl = document.getElementById('stat-count');
+            if(countEl) countEl.innerText = rawData.length;
+        }
 
         function renderTable(data) {
             const tBodyDesk = document.getElementById('tableBodyDesktop');
@@ -485,12 +487,25 @@
                 return;
             }
 
-            const displayData = [...data].reverse();
+            // Fetch the selected sort type
+            const sortVal = document.getElementById('sortSelector') ? document.getElementById('sortSelector').value : 'date-desc';
+            
+            // Sort data dynamically
+            const displayData = [...data].sort((a, b) => {
+                if (sortVal === 'date-desc' || sortVal === 'date-asc') {
+                    const dateA = new Date(a[1] || 0).getTime();
+                    const dateB = new Date(b[1] || 0).getTime();
+                    return sortVal === 'date-desc' ? dateB - dateA : dateA - dateB;
+                } else {
+                    const amtA = parseFloat(String(a[2]).replace(/[^0-9.-]+/g, "")) || 0;
+                    const amtB = parseFloat(String(b[2]).replace(/[^0-9.-]+/g, "")) || 0;
+                    return sortVal === 'amt-desc' ? amtB - amtA : amtA - amtB;
+                }
+            });
 
-            // Render Desktop (Table)
+            // Desktop Table
             tBodyDesk.innerHTML = displayData.map(row => {
                 let date = row[1] ? new Date(row[1]).toISOString().split('T')[0] : '';
-                // Safely strip symbols and commas
                 let amount = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
                 let desc = row[3] || '';
                 let cat = row[4] || 'Uncategorized';
@@ -511,10 +526,9 @@
                 </tr>`;
             }).join('');
 
-            // Render Mobile (Card List)
+            // Mobile Cards
             tBodyMob.innerHTML = displayData.map(row => {
                 let date = row[1] ? new Date(row[1]).toISOString().split('T')[0] : '';
-                // Safely strip symbols and commas
                 let amount = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
                 let desc = row[3] || '';
                 let cat = row[4] || 'Uncategorized';
@@ -558,7 +572,6 @@
             let incTotal = 0, expTotal = 0;
 
             rawData.forEach(row => {
-                // Safely strip symbols and commas
                 let amt = parseFloat(String(row[2]).replace(/[^0-9.-]+/g, "")) || 0;
                 let cat = row[4] || 'Uncategorized';
                 let type = String(row[5]).trim().toLowerCase();
@@ -576,8 +589,7 @@
                     datasets: [{
                         data: Object.values(catTotals),
                         backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e', '#14b8a6'],
-                        borderWidth: 0,
-                        cutout: '75%'
+                        borderWidth: 0, cutout: '75%'
                     }]
                 },
                 options: {
@@ -595,8 +607,7 @@
                     datasets: [{
                         data: [incTotal, expTotal],
                         backgroundColor: ['#3b82f6', '#f43f5e'],
-                        borderRadius: 6,
-                        barPercentage: 0.5
+                        borderRadius: 6, barPercentage: 0.5
                     }]
                 },
                 options: {
@@ -610,39 +621,33 @@
             });
         }
 
-        // Populates the dropdown with years based on your sheet data
         function populateYearDropdown() {
             const yearSelect = document.getElementById('yearSelector');
-            const years = new Set();
+            if (!yearSelect) return;
             
-            // Extract years from the Date column (index 1)
+            const years = new Set();
             rawData.forEach(row => {
                 if (row[1]) {
                     const date = new Date(row[1]);
                     if (!isNaN(date.getFullYear())) years.add(date.getFullYear());
                 }
             });
-            
-            // Ensure current year is always available
             years.add(new Date().getFullYear());
             
-            // Sort highest to lowest
             const sortedYears = Array.from(years).sort((a, b) => b - a);
-            
-            // Inject into HTML
             yearSelect.innerHTML = sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
         }
 
-        // Filters data by selected year and draws the 12-month bar chart
         function drawMonthlyChart() {
-            if (rawData.length === 0) return;
+            if (!document.getElementById('monthlyChart')) return;
             
-            const selectedYear = parseInt(document.getElementById('yearSelector').value);
-            const monthlyData = new Array(12).fill(0); // [Jan, Feb, ... Dec]
+            const yearSelect = document.getElementById('yearSelector');
+            const selectedYear = yearSelect ? parseInt(yearSelect.value) : new Date().getFullYear();
+            const monthlyData = new Array(12).fill(0); 
             
             rawData.forEach(row => {
                 let type = String(row[5]).trim().toLowerCase();
-                if (type !== 'expense') return; // Only sum up expenses
+                if (type !== 'expense') return; 
                 
                 if (row[1]) {
                     const date = new Date(row[1]);
@@ -663,14 +668,13 @@
                     datasets: [{
                         label: 'Total Spent (₹)',
                         data: monthlyData,
-                        backgroundColor: '#8b5cf6', // Purple color
+                        backgroundColor: '#8b5cf6', 
                         borderRadius: 4,
                         barPercentage: 0.6
                     }]
                 },
                 options: {
-                    responsive: true, 
-                    maintainAspectRatio: false,
+                    responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { display: false } },
                     scales: {
                         y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: {font: {size: 10}} },
