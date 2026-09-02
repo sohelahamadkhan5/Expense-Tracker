@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ExpenseTracker Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Hide scrollbars for clean mobile swiping */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .preset-scroll::-webkit-scrollbar { height: 4px; }
+        .preset-scroll::-webkit-scrollbar-track { background: #1e293b; border-radius: 4px; }
+        .preset-scroll::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        /* iOS Safe Area Padding */
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="bg-[#f8fafc] text-slate-800 h-full flex flex-col">
+
+    <!-- Top Header -->
+    <header class="bg-[#0f172a] text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-emerald-500 text-white p-2 rounded-lg font-bold shadow-sm">
+                    <i class="fa-solid fa-wallet text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">ExpenseTracker Pro</h1>
+                    <p class="text-[10px] text-slate-400 uppercase tracking-wider hidden sm:block">Financial Database & Collector</p>
+                </div>
+            </div>
+            
+            <!-- Desktop Nav Items -->
+            <div class="hidden md:flex items-center space-x-2">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-4 py-2 rounded-md font-medium text-sm flex items-center space-x-2 transition text-emerald-400 bg-slate-800 border border-slate-700">
+                    <i class="fa-solid fa-chart-pie"></i> <span>Dashboard</span>
+                </button>
+                <button onclick="switchTab('data')" id="nav-data" class="px-4 py-2 rounded-md font-medium text-sm hover:bg-slate-800 transition flex items-center space-x-2 text-slate-300">
+                    <i class="fa-solid fa-list-ul"></i> <span>Transactions</span>
+                </button>
+                <button onclick="switchTab('form')" id="nav-form" class="px-4 py-2 rounded-md font-medium text-sm hover:bg-slate-800 transition flex items-center space-x-2 text-slate-300">
+                    <i class="fa-solid fa-circle-plus"></i> <span>Add Expense</span>
+                </button>
+            </div>
+            
+            <!-- Universal Refresh Button -->
+            <button onclick="loadSheetData()" class="text-slate-400 hover:text-white p-2 rounded-md transition" title="Refresh Data">
+                <i class="fa-solid fa-rotate-right" id="refresh-icon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 overflow-y-auto pb-24 md:pb-6">
+        
+        <!-- Toast Notification (Elevated on mobile to avoid bottom nav) -->
+        <div id="toast" class="fixed bottom-20 md:bottom-5 right-4 md:right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 bg-slate-800 text-white px-4 py-3 rounded-xl shadow-xl flex items-center space-x-3 border border-slate-700">
+            <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
+            <span id="toast-msg" class="text-sm font-medium">Action completed</span>
+        </div>
+
+        <!-- DASHBOARD TAB -->
+        <div id="tab-dashboard" class="space-y-4 md:space-y-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Total Balance</p>
+                    <h3 id="stat-balance" class="text-lg md:text-2xl font-bold text-slate-800 mb-1">₹0.00</h3>
+                    <p class="text-[10px] text-emerald-600 font-medium"><i class="fa-solid fa-arrow-trend-up mr-1"></i> Healthy</p>
+                    <div class="absolute top-4 right-4 bg-emerald-50 text-emerald-500 p-2 md:p-3 rounded-xl opacity-50 md:opacity-100"><i class="fa-solid fa-scale-balanced text-lg"></i></div>
+                </div>
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Expenses</p>
+                    <h3 id="stat-expenses" class="text-lg md:text-2xl font-bold text-rose-500 mb-1">₹0.00</h3>
+                    <p class="text-[10px] text-slate-400 font-medium hidden md:block">All recorded outflows</p>
+                    <div class="absolute top-4 right-4 bg-rose-50 text-rose-500 p-2 md:p-3 rounded-xl opacity-50 md:opacity-100"><i class="fa-solid fa-arrow-trend-down text-lg"></i></div>
+                </div>
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Income</p>
+                    <h3 id="stat-income" class="text-lg md:text-2xl font-bold text-blue-500 mb-1">₹0.00</h3>
+                    <p class="text-[10px] text-slate-400 font-medium hidden md:block">All inflows</p>
+                    <div class="absolute top-4 right-4 bg-blue-50 text-blue-500 p-2 md:p-3 rounded-xl opacity-50 md:opacity-100"><i class="fa-solid fa-wallet text-lg"></i></div>
+                </div>
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 relative overflow-hidden">
+                    <p class="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Transactions</p>
+                    <h3 id="stat-count" class="text-lg md:text-2xl font-bold text-slate-800 mb-1">0</h3>
+                    <p class="text-[10px] text-slate-400 font-medium hidden md:block">Active records</p>
+                    <div class="absolute top-4 right-4 bg-indigo-50 text-indigo-500 p-2 md:p-3 rounded-xl opacity-50 md:opacity-100"><i class="fa-solid fa-receipt text-lg"></i></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-center mb-4 md:mb-6">
+                        <h3 class="font-bold text-slate-800 text-sm md:text-base"><i class="fa-solid fa-chart-pie text-emerald-500 mr-2"></i> Spending by Category</h3>
+                        <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded font-medium">Expenses Only</span>
+                    </div>
+                    <div class="h-48 md:h-64 relative flex items-center justify-center">
+                        <canvas id="doughnutChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100">
+                    <div class="flex justify-between items-center mb-4 md:mb-6">
+                        <h3 class="font-bold text-slate-800 text-sm md:text-base"><i class="fa-solid fa-chart-line text-blue-500 mr-2"></i> Cash Flow Trend</h3>
+                        <span class="text-[10px] bg-slate-100 text-slate-500 px-2 py-1 rounded font-medium">Monthly View</span>
+                    </div>
+                    <div class="h-48 md:h-64 relative flex items-center justify-center">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TRANSACTIONS TAB -->
+        <div id="tab-data" class="hidden space-y-4">
+            <!-- Search & Actions -->
+            <div class="bg-white p-3 md:p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div class="relative w-full sm:w-96">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fa-solid fa-search"></i></span>
+                    <input type="text" id="searchInput" onkeyup="filterTable()" placeholder="Search description, category..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition">
+                </div>
+                <div class="flex items-center space-x-2 w-full sm:w-auto">
+                    <button class="flex-1 md:flex-none bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-download"></i> <span class="hidden md:inline">Export</span>
+                    </button>
+                    <button onclick="switchTab('form')" class="flex-1 md:flex-none bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition flex items-center justify-center space-x-2 shadow-sm">
+                        <i class="fa-solid fa-plus"></i> <span>Add New</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Data Container -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden relative">
+                
+                <!-- Desktop Table View (Hidden on Mobile) -->
+                <div class="hidden md:block overflow-x-auto max-h-[600px]">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-white sticky top-0 z-10 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                            <tr>
+                                <th class="px-6 py-4">Date</th>
+                                <th class="px-6 py-4">Description</th>
+                                <th class="px-6 py-4">Category</th>
+                                <th class="px-6 py-4 text-right">Amount</th>
+                                <th class="px-6 py-4 text-center">Type</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50 text-sm text-slate-700" id="tableBodyDesktop">
+                            <!-- Desktop Rows -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Mobile List View (Hidden on Desktop) -->
+                <div class="md:hidden flex flex-col divide-y divide-slate-100" id="tableBodyMobile">
+                    <!-- Mobile Card Rows -->
+                </div>
+
+                <!-- Loading State -->
+                <div id="tableLoading" class="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center space-y-3 z-20 h-64 md:h-auto">
+                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-emerald-500"></i>
+                    <p class="text-slate-500 font-medium text-sm">Syncing database...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADD EXPENSE TAB -->
+        <div id="tab-form" class="hidden max-w-4xl mx-auto space-y-4 md:space-y-6">
+            
+            <!-- Dark Presets Box (Horizontal scroll on mobile) -->
+            <div class="bg-[#0f172a] rounded-2xl shadow-lg border border-slate-800 p-4 md:p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="font-bold text-white text-base md:text-lg flex items-center"><i class="fa-solid fa-bolt text-amber-400 mr-2"></i> Quick-Add Presets</h3>
+                        <p class="text-[10px] md:text-xs text-slate-400 mt-1 hidden md:block">Click any frequent item below to load it into the form.</p>
+                    </div>
+                </div>
+                
+                <div class="flex md:grid md:grid-cols-4 gap-3 overflow-x-auto preset-scroll pb-2 snap-x" id="presetContainer">
+                    <!-- Presets injected via JS -->
+                </div>
+            </div>
+
+            <!-- Main Form -->
+            <div class="bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-100">
+                <div class="mb-6 pb-4 border-b border-slate-100">
+                    <h2 class="text-lg md:text-xl font-bold text-slate-800">Add New Transaction</h2>
+                </div>
+
+                <form id="expenseForm" onsubmit="handleFormSubmit(event)" class="space-y-5 md:space-y-6">
+                    <input type="hidden" id="txId">
+                    
+                    <div class="grid grid-cols-2 gap-4 md:gap-6">
+                        <div>
+                            <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Transaction Type</label>
+                            <select id="txType" required class="w-full px-3 py-3 md:px-4 md:py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition appearance-none">
+                                <option value="Expense">Expense</option>
+                                <option value="Income">Income</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Date</label>
+                            <input type="date" id="txDate" required class="w-full px-3 py-3 md:px-4 md:py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Description</label>
+                        <input type="text" id="txDesc" required placeholder="e.g. Whole Foods Market..." class="w-full px-3 py-3 md:px-4 md:py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                        <div>
+                            <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Category</label>
+                            <input type="text" id="txCategory" required list="cat-suggestions" placeholder="e.g. Food" class="w-full px-3 py-3 md:px-4 md:py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                            <datalist id="cat-suggestions">
+                                <option value="Housing">
+                                <option value="Food">
+                                <option value="Transport">
+                                <option value="Shopping">
+                                <option value="Bills">
+                                <option value="Personal Care">
+                                <option value="Donation">
+                                <option value="Salary">
+                            </datalist>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Amount (₹)</label>
+                            <input type="number" id="txAmount" step="0.01" required placeholder="0.00" class="w-full px-3 py-3 md:px-4 md:py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-700 text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition">
+                        </div>
+                    </div>
+
+                    <div class="pt-6 flex justify-end space-x-3 border-t border-slate-100">
+                        <button type="button" onclick="switchTab('data')" class="px-5 py-3 border border-slate-200 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-50 transition hidden md:block">Cancel</button>
+                        <button type="submit" id="submitBtn" class="w-full md:w-auto px-6 py-3 bg-emerald-500 text-white rounded-xl text-sm font-bold hover:bg-emerald-600 transition flex items-center justify-center space-x-2 shadow-md">
+                            <i class="fa-solid fa-save"></i> <span>Save Transaction</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- App-Style Bottom Navigation (Mobile Only) -->
+    <nav class="md:hidden fixed bottom-0 w-full bg-[#0f172a] border-t border-slate-800 z-50 px-2 py-3 flex justify-around items-center pb-safe">
+        <button onclick="switchTab('dashboard')" id="mob-nav-dashboard" class="flex flex-col items-center space-y-1 text-emerald-400 transform scale-110 transition">
+            <i class="fa-solid fa-chart-pie text-xl"></i>
+            <span class="text-[10px] font-medium tracking-wide">Dashboard</span>
+        </button>
+        <button onclick="switchTab('data')" id="mob-nav-data" class="flex flex-col items-center space-y-1 text-slate-400 transition">
+            <i class="fa-solid fa-list-ul text-xl"></i>
+            <span class="text-[10px] font-medium tracking-wide">Records</span>
+        </button>
+        <button onclick="switchTab('form')" id="mob-nav-form" class="flex flex-col items-center space-y-1 text-slate-400 transition relative">
+            <!-- Floating style add button -->
+            <div class="absolute -top-6 bg-emerald-500 text-white p-3 rounded-full shadow-lg shadow-emerald-500/30">
+                <i class="fa-solid fa-plus text-lg"></i>
+            </div>
+            <span class="text-[10px] font-medium tracking-wide mt-6">Add</span>
+        </button>
+    </nav>
+
+    <!-- Application Logic -->
+    <script>
+        // API Configuration 
+        const apiUrl = "https://script.google.com/macros/s/AKfycbwotdnxhZWQQGf0fJ-aYTt5GXBAqFZVSWRZ4DHKKJiF8apeiEIGs-F-rnazMoN6dls7/exec";
+        
+        let rawData = [];
+        let doughnutChartInst = null;
+        let barChartInst = null;
+        
+        const currencyFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const currentMonthName = new Date().toLocaleString('default', { month: 'long' });
+
+        // Category Icon Mapper for Mobile UI
+        const catIcons = {
+            'Housing': 'fa-house', 'Food': 'fa-utensils', 'Transport': 'fa-car',
+            'Shopping': 'fa-bag-shopping', 'Bills': 'fa-file-invoice',
+            'Personal Care': 'fa-spa', 'Donation': 'fa-hand-holding-heart', 'Salary': 'fa-money-bill-wave'
+        };
+
+        const presets = [
+            { desc: `Rent for the month - ${currentMonthName}`, amount: 7500, category: 'Housing', type: 'Expense' },
+            { desc: 'Petrol Indore', amount: 240, category: 'Transport', type: 'Expense' },
+            { desc: 'Chicken 1Kg', amount: 260, category: 'Food', type: 'Expense' },
+            { desc: 'Ghee - ½ kg', amount: 350, category: 'Food', type: 'Expense' },
+            { desc: 'Milk - ½ litre', amount: 33, category: 'Food', type: 'Expense' },
+            { desc: 'Eggs - 6', amount: 48, category: 'Food', type: 'Expense' },
+            { desc: 'D-Mart', amount: 1701, category: 'Shopping', type: 'Expense' },
+            { desc: 'MATW', amount: 0, category: 'Donation', type: 'Expense' },
+            { desc: 'Blinkit', amount: 0, category: 'Shopping', type: 'Expense' },
+            { desc: 'Recharge - Papa Jio', amount: 0, category: 'Bills', type: 'Expense' },
+            { desc: 'Petrol - Ujjain', amount: 0, category: 'Transport', type: 'Expense' },
+            { desc: 'Hair and Beard Cutting', amount: 100, category: 'Personal Care', type: 'Expense' },
+            { desc: 'Rapido', amount: 90, category: 'Transport', type: 'Expense' },
+            { desc: 'WiFi Bill', amount: 470, category: 'Bills', type: 'Expense' },
+            { desc: 'Eggs - 14', amount: 100, category: 'Food', type: 'Expense' },
+            { desc: 'Banana - 13', amount: 40, category: 'Food', type: 'Expense' },
+            { desc: 'Full plate', amount: 85, category: 'Food', type: 'Expense' },
+            { desc: 'Petrol', amount: 220, category: 'Transport', type: 'Expense' }
+        ];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderPresets();
+            document.getElementById('txDate').valueAsDate = new Date();
+            loadSheetData();
+        });
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            ['dashboard', 'data', 'form'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                
+                // Reset Desktop Nav
+                const btn = document.getElementById(`nav-${t}`);
+                if(btn) btn.className = "px-4 py-2 rounded-md font-medium text-sm transition flex items-center space-x-2 text-slate-300 hover:bg-slate-800";
+                
+                // Reset Mobile Nav
+                const mobBtn = document.getElementById(`mob-nav-${t}`);
+                if(mobBtn) {
+                    mobBtn.classList.remove('text-emerald-400', 'scale-110');
+                    mobBtn.classList.add('text-slate-400');
+                }
+            });
+            
+            // Show Active Tab
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            
+            // Highlight Desktop Nav
+            const activeBtn = document.getElementById(`nav-${tabName}`);
+            if(activeBtn) activeBtn.className = "px-4 py-2 rounded-md font-medium text-sm flex items-center space-x-2 transition text-emerald-400 bg-slate-800 border border-slate-700";
+            
+            // Highlight Mobile Nav
+            const activeMobBtn = document.getElementById(`mob-nav-${tabName}`);
+            if(activeMobBtn) {
+                activeMobBtn.classList.remove('text-slate-400');
+                activeMobBtn.classList.add('text-emerald-400', 'scale-110');
+            }
+
+            if (tabName === 'dashboard') drawCharts();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderPresets() {
+            const container = document.getElementById('presetContainer');
+            container.innerHTML = presets.map((p, idx) => `
+                <div onclick="loadPreset(${idx})" class="min-w-[140px] md:min-w-0 snap-start flex-shrink-0 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl p-3 cursor-pointer transition flex flex-col justify-between group h-20 md:h-auto">
+                    <p class="text-[11px] md:text-sm text-slate-200 font-medium truncate mb-2" title="${p.desc}">${p.desc}</p>
+                    <div class="flex justify-between items-end">
+                        <span class="bg-slate-700 group-hover:bg-slate-600 text-slate-300 px-1.5 py-0.5 rounded text-[9px] md:text-[10px] font-bold tracking-wide">${p.category}</span>
+                        <span class="text-emerald-400 font-bold text-xs md:text-sm">${p.amount > 0 ? '₹' + p.amount : '₹0'}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadPreset(index) {
+            const p = presets[index];
+            document.getElementById('txDesc').value = p.desc;
+            document.getElementById('txAmount').value = p.amount > 0 ? p.amount : '';
+            document.getElementById('txCategory').value = p.category;
+            document.getElementById('txType').value = p.type;
+            document.getElementById('txDate').valueAsDate = new Date();
+            showToast("Preset loaded!", "success");
+        }
+
+        async function loadSheetData() {
+            const icon = document.getElementById('refresh-icon');
+            const loading = document.getElementById('tableLoading');
+            icon.classList.add('fa-spin');
+            loading.style.display = 'flex';
+            
+            try {
+                const response = await fetch(apiUrl);
+                const result = await response.json();
+                
+                if (result.status === "success" && result.data && result.data.length > 1) {
+                    rawData = result.data.slice(1); 
+                } else {
+                    rawData = [];
+                }
+
+                updateDashboard();
+                renderTable(rawData);
+                drawCharts();
+                loading.style.display = 'none';
+
+            } catch (error) {
+                loading.style.display = 'none';
+                showToast("Sync failed. Check connection.", "error");
+            } finally {
+                icon.classList.remove('fa-spin');
+            }
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const orgHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> <span>Saving...</span>';
+            btn.disabled = true;
+
+            const payload = {
+                "Unique ID": document.getElementById('txId').value || new Date().getTime(),
+                "Date": document.getElementById('txDate').value,
+                "Amount": parseFloat(document.getElementById('txAmount').value) || 0,
+                "Spent On": document.getElementById('txDesc').value,
+                "Category": document.getElementById('txCategory').value,
+                "Transaction Type": document.getElementById('txType').value
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "text/plain;charset=utf-8" },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                if (result.status === "success") {
+                    showToast("Transaction logged!", "success");
+                    e.target.reset();
+                    document.getElementById('txDate').valueAsDate = new Date();
+                    document.getElementById('txId').value = "";
+                    switchTab('data');
+                    await loadSheetData();
+                }
+            } catch (error) {
+                showToast("Failed to save to cloud.", "error");
+            } finally {
+                btn.innerHTML = orgHtml;
+                btn.disabled = false;
+            }
+        }
+
+        function updateDashboard() {
+            let inc = 0, exp = 0;
+            rawData.forEach(row => {
+                let amount = parseFloat(row[2]) || 0;
+                let type = String(row[5]).trim().toLowerCase();
+                if (type === 'income') inc += amount;
+                else exp += amount;
+            });
+
+            document.getElementById('stat-balance').innerText = currencyFmt.format(inc - exp);
+            document.getElementById('stat-income').innerText = currencyFmt.format(inc);
+            document.getElementById('stat-expenses').innerText = currencyFmt.format(exp);
+            document.getElementById('stat-count').innerText = rawData.length;
+        }
+
+        function renderTable(data) {
+            const tBodyDesk = document.getElementById('tableBodyDesktop');
+            const tBodyMob = document.getElementById('tableBodyMobile');
+            
+            if (data.length === 0) {
+                const emptyMsg = `<div class="py-12 text-center text-slate-400 font-medium">No transactions found.</div>`;
+                tBodyDesk.innerHTML = `<tr><td colspan="5">${emptyMsg}</td></tr>`;
+                tBodyMob.innerHTML = emptyMsg;
+                return;
+            }
+
+            const displayData = [...data].reverse();
+
+            // Render Desktop (Table)
+            tBodyDesk.innerHTML = displayData.map(row => {
+                let date = row[1] ? new Date(row[1]).toISOString().split('T')[0] : '';
+                let amount = parseFloat(row[2]) || 0;
+                let desc = row[3] || '';
+                let cat = row[4] || 'Uncategorized';
+                let type = String(row[5]).trim();
+                let isIncome = type.toLowerCase() === 'income';
+
+                let typeBadge = isIncome ? 'bg-blue-50 text-blue-600' : 'bg-rose-50 text-rose-600';
+                let amountStr = isIncome ? `+${currencyFmt.format(amount)}` : `-${currencyFmt.format(amount)}`;
+                let amountColor = isIncome ? 'text-blue-600' : 'text-slate-800'; 
+
+                return `
+                <tr class="hover:bg-slate-50 transition border-b border-slate-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-slate-500 font-medium">${date}</td>
+                    <td class="px-6 py-4 text-slate-800 font-medium">${desc}</td>
+                    <td class="px-6 py-4 whitespace-nowrap"><span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md text-xs font-bold">${cat}</span></td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right font-bold ${amountColor}">${amountStr}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-center"><span class="${typeBadge} px-2.5 py-1 rounded-md text-[10px] uppercase font-bold tracking-wider">${type}</span></td>
+                </tr>`;
+            }).join('');
+
+            // Render Mobile (Card List)
+            tBodyMob.innerHTML = displayData.map(row => {
+                let date = row[1] ? new Date(row[1]).toISOString().split('T')[0] : '';
+                let amount = parseFloat(row[2]) || 0;
+                let desc = row[3] || '';
+                let cat = row[4] || 'Uncategorized';
+                let type = String(row[5]).trim();
+                let isIncome = type.toLowerCase() === 'income';
+
+                let amountStr = isIncome ? `+${currencyFmt.format(amount)}` : `-${currencyFmt.format(amount)}`;
+                let amountColor = isIncome ? 'text-blue-600' : 'text-slate-800'; 
+                let typeColor = isIncome ? 'text-blue-500' : 'text-rose-500';
+                let iconClass = catIcons[cat] || 'fa-tag';
+
+                return `
+                <div class="flex justify-between items-center p-4 bg-white active:bg-slate-50 transition">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <div class="bg-slate-100/80 w-10 h-10 rounded-xl flex items-center justify-center text-slate-500 flex-shrink-0">
+                            <i class="fa-solid ${iconClass}"></i>
+                        </div>
+                        <div class="flex flex-col overflow-hidden">
+                            <span class="text-slate-800 font-bold text-sm truncate w-full pr-2">${desc}</span>
+                            <span class="text-[10px] text-slate-500 font-medium mt-0.5">${date} &bull; ${cat}</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col items-end flex-shrink-0 pl-2">
+                        <span class="font-bold text-sm ${amountColor}">${amountStr}</span>
+                        <span class="text-[9px] uppercase font-bold mt-0.5 ${typeColor} bg-slate-50 px-1.5 py-0.5 rounded">${type}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = rawData.filter(row => row.some(cell => String(cell).toLowerCase().includes(query)));
+            renderTable(filtered);
+        }
+
+        function drawCharts() {
+            if (rawData.length === 0) return;
+
+            let catTotals = {};
+            let incTotal = 0, expTotal = 0;
+
+            rawData.forEach(row => {
+                let amt = parseFloat(row[2]) || 0;
+                let cat = row[4] || 'Uncategorized';
+                let type = String(row[5]).trim().toLowerCase();
+
+                if (type === 'income') { incTotal += amt; } 
+                else { expTotal += amt; catTotals[cat] = (catTotals[cat] || 0) + amt; }
+            });
+
+            const ctxDoughnut = document.getElementById('doughnutChart').getContext('2d');
+            if (doughnutChartInst) doughnutChartInst.destroy();
+            doughnutChartInst = new Chart(ctxDoughnut, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(catTotals),
+                    datasets: [{
+                        data: Object.values(catTotals),
+                        backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f43f5e', '#14b8a6'],
+                        borderWidth: 0,
+                        cutout: '75%'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, font: {size: 10} } } }
+                }
+            });
+
+            const ctxBar = document.getElementById('barChart').getContext('2d');
+            if (barChartInst) barChartInst.destroy();
+            barChartInst = new Chart(ctxBar, {
+                type: 'bar',
+                data: {
+                    labels: ['Income', 'Expenses'],
+                    datasets: [{
+                        data: [incTotal, expTotal],
+                        backgroundColor: ['#3b82f6', '#f43f5e'],
+                        borderRadius: 6,
+                        barPercentage: 0.5
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' }, border: { display: false }, ticks: {font: {size: 10}} },
+                        x: { grid: { display: false }, border: { display: false }, ticks: {font: {size: 10}} }
+                    }
+                }
+            });
+        }
+
+        let toastTimeout;
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = message;
+            document.getElementById('toast-icon').className = type === 'success' 
+                ? "fa-solid fa-circle-check text-emerald-400 text-lg" 
+                : "fa-solid fa-circle-exclamation text-rose-400 text-lg";
+
+            toast.classList.remove('translate-y-24', 'opacity-0');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.add('translate-y-24', 'opacity-0'), 3000);
+        }
+    </script>
+</body>
+</html>
